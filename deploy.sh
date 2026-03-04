@@ -30,7 +30,7 @@ if [ ! -f .env ]; then
     cat > .env << EOF
 DB_PASSWORD=$DB_PASS
 JWT_SECRET=$JWT_SEC
-CLIENT_URL=http://$SERVER_IP
+CLIENT_URL=http://$SERVER_IP:8080
 EOF
     echo ".env created with auto-generated secrets"
     echo "Server IP: $SERVER_IP"
