@@ -9,7 +9,7 @@ RUN npm ci --workspace @capsule/web --no-audit --no-fund
 
 COPY apps/web ./apps/web
 
-RUN npm run build --workspace @capsule/web
+RUN npm run build:docker --workspace @capsule/web
 
 FROM nginx:alpine
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
