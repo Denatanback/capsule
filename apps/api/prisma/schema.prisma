@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  displayName   String
+  passwordHash  String?
+  avatarUrl     String?
+  aboutMe       String?
+  status        UserStatus @default(OFFLINE)
+  lastSeenAt    DateTime?
+  failedLogins  Int       @default(0)
+  lockedUntil   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  members       Member[]
+  messages      Message[]
+  refreshTokens RefreshToken[]
+  friendsSent   Friendship[] @relation("friendFrom")
+  friendsRecv   Friendship[] @relation("friendTo")
+  dmChannelsA   DMChannel[]  @relation("dmUserA")
+  dmChannelsB   DMChannel[]  @relation("dmUserB")
+  dmMessages    DMMessage[]
+  notes         Note[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  accessToken       String?
+  refreshToken      String?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Server {
+  id          String   @id @default(cuid())
+  name        String
+  iconUrl     String?
+  ownerId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  channels    Channel[]
+  members     Member[]
+  invites     Invite[]
+  bans        Ban[]
+
+  @@map("servers")
+}
+
+model Channel {
+  id        String      @id @default(cuid())
+  name      String
+  type      ChannelType @default(TEXT)
+  serverId  String
+  position  Int         @default(0)
+  createdAt DateTime    @default(now())
+
+  server    Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@map("channels")
+}
+
+model Member {
+  id       String     @id @default(cuid())
+  role     MemberRole @default(MEMBER)
+  userId   String
+  serverId String
+  joinedAt DateTime   @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@map("members")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  voiceUrl  String?
+  channelId String
+  authorId  String
+  editedAt  DateTime?
+  createdAt DateTime @default(now())
+
+  channel     Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  attachments FileUpload[]
+
+  @@index([channelId, createdAt])
+  @@map("messages")
+}
+
+model FileUpload {
+  id         String   @id @default(cuid())
+  uuid       String   @unique
+  filename   String
+  mime       String
+  size       Int
+  serverId   String?
+  channelId  String?
+  messageId  String?
+  uploaderId String
+  createdAt  DateTime @default(now())
+
+  message Message? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+
+  @@index([serverId, createdAt])
+  @@index([channelId])
+  @@map("file_uploads")
+}
+
+enum UserStatus {
+  ONLINE
+  IDLE
+  DND
+  OFFLINE
+}
+
+enum ChannelType {
+  TEXT
+  VOICE
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum FriendStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Friendship {
+  id        String       @id @default(cuid())
+  fromId    String
+  toId      String
+  status    FriendStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  from User @relation("friendFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to   User @relation("friendTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@unique([fromId, toId])
+  @@map("friendships")
+}
+
+model DMChannel {
+  id        String   @id @default(cuid())
+  userAId   String
+  userBId   String
+  createdAt DateTime @default(now())
+
+  userA    User        @relation("dmUserA", fields: [userAId], references: [id], onDelete: Cascade)
+  userB    User        @relation("dmUserB", fields: [userBId], references: [id], onDelete: Cascade)
+  messages DMMessage[]
+
+  @@unique([userAId, userBId])
+  @@map("dm_channels")
+}
+
+model DMMessage {
+  id          String    @id @default(cuid())
+  content     String
+  voiceUrl    String?
+  dmChannelId String
+  authorId    String
+  editedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  dmChannel DMChannel @relation(fields: [dmChannelId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([dmChannelId, createdAt])
+  @@map("dm_messages")
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  serverId  String
+  creatorId String
+  maxUses   Int?
+  uses      Int       @default(0)
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  server  Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@map("invites")
+}
+
+model Ban {
+  id        String   @id @default(cuid())
+  userId    String
+  serverId  String
+  reason    String?
+  bannedBy  String
+  createdAt DateTime @default(now())
+
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serverId])
+  @@map("bans")
+}
+
+model LastRead {
+  id           String   @id @default(cuid())
+  userId       String
+  channelId    String?
+  dmChannelId  String?
+  lastReadAt   DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, channelId])
+  @@unique([userId, dmChannelId])
+  @@index([userId])
+  @@map("last_reads")
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  userId    String
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, blockedId])
+  @@map("blocks")
+}
+
+model PlayerCity {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  cityName      String   @default("My City")
+  coins         Float    @default(500)
+  population    Int      @default(0)
+  happiness     Int      @default(50)
+  buildings     Json     @default("[]")
+  buildQueue    Json     @default("[]")
+  unlockedTech  Json     @default("[\"mayor1\"]")
+  techPoints    Int      @default(5)
+  mayorXp       Int      @default(0)
+  mayorLevel    Int      @default(1)
+  achievements  Json     @default("[]")
+  loginStreak   Int      @default(0)
+  lastLoginDate String?
+  starterPicked Boolean  @default(false)
+  mapVisible    Boolean  @default(false)
+  lastTick      DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("player_cities")
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  userId    String
+  content   String
+  fileUrl   String?
+  fileName  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notes")
+}

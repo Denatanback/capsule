@@ -1,0 +1,44 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: capsule
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-capsulepass123}
+      POSTGRES_DB: capsule
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+    environment:
+      DATABASE_URL: postgresql://capsule:${DB_PASSWORD:-capsulepass123}@postgres:5432/capsule
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-please}
+      PORT: 3001
+      CLIENT_URL: ${CLIENT_URL:-http://localhost}
+      NODE_ENV: production
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "127.0.0.1:3001:3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: always
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  pgdata:
+  uploads:
