@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useServerStore } from "../stores/serverStore";
 import { api } from "../lib/api";
 import Logo from "./Logo";
+import Avatar from "./Avatar";
 
 export default function CapsuleBar({ view, setView, onToggleTheme, dark, onSettings, onLogout, user }: any) {
   const createServer = useServerStore((s) => s.createServer);
@@ -65,11 +66,8 @@ export default function CapsuleBar({ view, setView, onToggleTheme, dark, onSetti
           <button onClick={onSettings} className="p-2 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all text-base" title="Settings">
             ⚙️
           </button>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold ml-1 cursor-pointer hover:ring-2 hover:ring-white/30 transition-all"
-            onClick={onSettings}
-            style={{ background: "var(--accent)" }}
-            title="Profile settings">
-            {user?.displayName?.charAt(0)?.toUpperCase()}
+          <div className="ml-1 cursor-pointer hover:ring-2 hover:ring-white/30 rounded-xl transition-all" onClick={onSettings} title="Profile settings">
+            <Avatar name={user?.displayName} id={user?.id} avatarUrl={user?.avatarUrl} size="sm" />
           </div>
         </div>
       </div>

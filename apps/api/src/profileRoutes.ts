@@ -85,9 +85,18 @@ export async function profileRoutes(app: FastifyInstance) {
     if (buffer.length > 5 * 1024 * 1024) return reply.status(400).send({ error: "Max 5MB" });
     if (!data.mimetype?.startsWith("image/")) return reply.status(400).send({ error: "Images only" });
     const ext = data.filename?.match(/\.\w+$/)?.[0] || ".jpg";
-    const filename = `avatar_${userId}${ext}`;
     const dir = path.resolve("uploads/avatars");
     await fs.mkdir(dir, { recursive: true });
+
+    const prev = await db.user.findUnique({ where: { id: userId }, select: { avatarUrl: true } });
+    if (prev?.avatarUrl?.startsWith("/api/avatars/")) {
+      const prevName = prev.avatarUrl.split("/api/avatars/")[1]?.split("?")[0];
+      if (prevName) {
+        await fs.unlink(path.join(dir, prevName)).catch(() => {});
+      }
+    }
+
+    const filename = `avatar_${userId}_${Date.now()}${ext}`;
     await fs.writeFile(path.join(dir, filename), buffer);
     const avatarUrl = `/api/avatars/${filename}`;
     await db.user.update({ where: { id: userId }, data: { avatarUrl } });
@@ -102,6 +111,7 @@ export async function profileRoutes(app: FastifyInstance) {
       const buf = await fs.readFile(filePath);
       const ext = filename.split(".").pop()?.toLowerCase();
       const mime = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+      reply.header("Cache-Control", "no-store");
       reply.type(mime).send(buf);
     } catch { reply.status(404).send({ error: "Not found" }); }
   });

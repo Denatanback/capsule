@@ -18,6 +18,7 @@ export default function ThreadList({ onOpenSplit, splitChannelId }: { onOpenSpli
   const voiceJoin = useVoiceStore((s) => s.join);
   const channelUnreads = useNotificationStore((s) => s.channelUnreads);
   const [showAdd, setShowAdd] = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
   const [chName, setChName] = useState("");
   const [chType, setChType] = useState("TEXT");
   const [inviteCopied, setInviteCopied] = useState(false);
@@ -34,7 +35,18 @@ export default function ThreadList({ onOpenSplit, splitChannelId }: { onOpenSpli
   const handleInvite = async () => {
     try {
       const res = await api.createInvite(detail.id, null, null);
-      await navigator.clipboard.writeText(res.code || res.invite?.code);
+      const code = res?.code || res?.invite?.code || "";
+      if (!code) return;
+      setInviteCode(code);
+      try {
+        if (window.isSecureContext && navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(code);
+          setInviteCopied(true);
+          setTimeout(() => setInviteCopied(false), 2000);
+          return;
+        }
+      } catch {}
+      window.prompt("Copy invite code", code);
       setInviteCopied(true);
       setTimeout(() => setInviteCopied(false), 2000);
     } catch {}
@@ -49,7 +61,7 @@ export default function ThreadList({ onOpenSplit, splitChannelId }: { onOpenSpli
         <button onClick={handleInvite}
           className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
           style={{ background: inviteCopied ? "var(--success)" : "var(--accent-soft)", color: inviteCopied ? "white" : "var(--accent)" }}>
-          {inviteCopied ? "Copied!" : "Invite"}
+          {inviteCopied ? "Copied!" : inviteCode ? `📋 ${inviteCode}` : "Invite"}
         </button>
       </div>
 

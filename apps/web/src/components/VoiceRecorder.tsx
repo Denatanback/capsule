@@ -6,6 +6,7 @@ export default function VoiceRecorder({ onRecorded }: { onRecorded: (voiceUrl: s
   const [uploading, setUploading] = useState(false);
   const [duration, setDuration] = useState(0);
   const [level, setLevel] = useState(0);
+  const [blockedReason, setBlockedReason] = useState("");
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<any>(null);
@@ -31,10 +32,17 @@ export default function VoiceRecorder({ onRecorded }: { onRecorded: (voiceUrl: s
 
   const start = async () => {
     try {
+      if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        const msg = "Microphone access is blocked on plain HTTP. Open the app via HTTPS (or localhost) to record voice messages.";
+        setBlockedReason(msg);
+        alert(msg);
+        return;
+      }
       const savedInput = localStorage.getItem("capsule_audio_input");
       const constraints = savedInput
         ? { audio: { deviceId: { exact: savedInput } } }
         : { audio: true };
+      setBlockedReason("");
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       const ctx = new AudioContext();
       ctxRef.current = ctx;
@@ -98,6 +106,7 @@ export default function VoiceRecorder({ onRecorded }: { onRecorded: (voiceUrl: s
       monitorLevel();
     } catch (err) {
       console.error("[Voice] Mic access denied:", err);
+      setBlockedReason("Microphone permission was denied or is unavailable in this browser context.");
     }
   };
 
@@ -179,7 +188,7 @@ export default function VoiceRecorder({ onRecorded }: { onRecorded: (voiceUrl: s
       style={{ color: "var(--text-muted)" }}
       onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
       onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}
-      title="Record voice message">
+      title={blockedReason || "Record voice message"}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
         <path d="M19 10v2a7 7 0 0 1-14 0v-2" />

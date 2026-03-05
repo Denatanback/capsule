@@ -7,6 +7,7 @@ import { useFriendStore } from "../stores/friendStore";
 import { usePresenceStore } from "../stores/presenceStore";
 import { api } from "../lib/api";
 import Avatar from "../components/Avatar";
+import { syncCurrentUserEverywhere } from "../lib/syncCurrentUser";
 
 type Tab = "profile" | "settings" | "contacts";
 
@@ -104,6 +105,7 @@ function ProfileTab({ user, onUpdate }: any) {
     setSaving(true); setMsg("");
     try {
       await api.updateProfile({ displayName, aboutMe });
+      syncCurrentUserEverywhere({ displayName, aboutMe });
       await onUpdate();
       setMsg("Profile updated!");
       setTimeout(() => setMsg(""), 3000);
@@ -113,6 +115,12 @@ function ProfileTab({ user, onUpdate }: any) {
 
   return (
     <div className="max-w-lg space-y-6 fade-in">
+      {(!window.isSecureContext || !navigator.mediaDevices) && (
+        <div className="rounded-2xl p-4" style={{ background: "var(--warning-soft, rgba(245, 158, 11, 0.12))", border: "1px solid var(--border)" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>Microphone and clipboard are limited on plain HTTP.</p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>On an IP like http://... the browser may block microphone access and clipboard copy. Voice messages and one-click invite copy will work reliably after HTTPS is enabled.</p>
+        </div>
+      )}
       {/* Preview card */}
       <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid var(--border)" }}>
         <div className="h-24 avatar-gradient-1" />
@@ -127,7 +135,8 @@ function ProfileTab({ user, onUpdate }: any) {
               if (!file) return;
               try {
                 const { avatarUrl: newUrl } = await api.uploadAvatar(file);
-                useAuthStore.getState().fetchUser();
+                syncCurrentUserEverywhere({ avatarUrl: newUrl });
+                await useAuthStore.getState().fetchUser();
               } catch (err: any) { alert(err.message); }
             }} />
           </label>
@@ -192,9 +201,16 @@ function SettingsTab({ dark, toggle, soundEnabled, toggleSound, browserNotifsEna
   const [selectedOutput, setSelectedOutput] = useState(localStorage.getItem("capsule_audio_output") || "");
 
   useEffect(() => {
-    navigator.mediaDevices.enumerateDevices().then((devices) => {
+    const mediaDevices = typeof navigator !== "undefined" ? navigator.mediaDevices : undefined;
+    if (!mediaDevices?.enumerateDevices) {
+      setAudioDevices([]);
+      return;
+    }
+    mediaDevices.enumerateDevices().then((devices) => {
       setAudioDevices(devices.filter((d) => d.kind === "audioinput" || d.kind === "audiooutput"));
-    }).catch(() => {});
+    }).catch(() => {
+      setAudioDevices([]);
+    });
   }, []);
 
   const inputs = audioDevices.filter((d) => d.kind === "audioinput");

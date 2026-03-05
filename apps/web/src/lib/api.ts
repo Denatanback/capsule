@@ -162,6 +162,7 @@ export const api = {
   deleteInvite: (sid, iid) => req("/servers/" + sid + "/invites/" + iid, { method: "DELETE" }),
   lookupInvite: (code) => req("/invites/" + code),
   useInvite: (code) => req("/invites/" + code + "/join", { method: "POST" }),
+  joinInvite: (code) => req("/invites/" + code + "/join", { method: "POST" }),
 
   // Member management
   kickMember: (sid, uid) => req("/servers/" + sid + "/members/" + uid + "/kick", { method: "POST" }),

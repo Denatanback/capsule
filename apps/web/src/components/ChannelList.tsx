@@ -44,18 +44,28 @@ export default function ChannelList({ onOpenSplit, splitChannelId }: { onOpenSpl
       <div className="h-12 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800">
         <span className="font-bold text-sm truncate">{detail.name}</span>
         <button onClick={async () => {
-          if (inviteCode) {
-            await navigator.clipboard.writeText(inviteCode).catch(() => {});
+          const reveal = async (code: string) => {
+            setInviteCode(code);
+            try {
+              if (window.isSecureContext && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(code);
+              } else {
+                window.prompt("Copy invite code", code);
+              }
+            } catch {
+              window.prompt("Copy invite code", code);
+            }
             setInviteCopied(true);
             setTimeout(() => setInviteCopied(false), 2000);
+          };
+          if (inviteCode) {
+            await reveal(inviteCode);
             return;
           }
           try {
             const r = await api.createInvite(detail.id, {});
-            setInviteCode(r.invite.code);
-            await navigator.clipboard.writeText(r.invite.code).catch(() => {});
-            setInviteCopied(true);
-            setTimeout(() => setInviteCopied(false), 2000);
+            const code = r?.invite?.code || r?.code;
+            if (code) await reveal(code);
           } catch {}
         }} className="text-xs text-indigo-500 hover:text-indigo-600" title={inviteCode ? "Click to copy" : "Create invite"}>
           {inviteCopied ? "✅ Copied!" : inviteCode ? `📋 ${inviteCode}` : "Invite"}

@@ -7,6 +7,7 @@ import { send } from "../lib/ws";
 import { api } from "../lib/api";
 import VoiceRecorder from "./VoiceRecorder";
 import VoicePlayer from "./VoicePlayer";
+import Avatar from "./Avatar";
 
 const EMPTY: any[] = [];
 
@@ -99,12 +100,7 @@ export default function DMChat() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b shrink-0"
         style={{ borderColor: "var(--border)", background: "var(--bg-primary)" }}>
-        <div className="relative">
-          <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">
-            {otherUser?.displayName?.charAt(0)?.toUpperCase() || "?"}
-          </div>
-          {peerOnline && <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2" style={{ borderColor: "var(--bg-primary)" }} />}
-        </div>
+        <Avatar name={otherUser?.displayName} id={otherUser?.id} avatarUrl={otherUser?.avatarUrl} size="sm" online={peerOnline} />
         <div>
           <p className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>{otherUser?.displayName || "DM"}</p>
           <p className="text-[10px]" style={{ color: peerOnline ? "var(--success)" : "var(--text-muted)" }}>
@@ -142,9 +138,7 @@ export default function DMChat() {
           <div key={msg.id} className="group flex items-start gap-3 py-1.5 px-3 rounded-lg transition-colors"
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-tertiary)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-            <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0 mt-0.5">
-              {msg.author?.displayName?.charAt(0)?.toUpperCase()}
-            </div>
+            <Avatar name={msg.author?.displayName} id={msg.author?.id} avatarUrl={msg.author?.avatarUrl} size="sm" className="mt-0.5" />
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>{msg.author?.displayName}</span>
